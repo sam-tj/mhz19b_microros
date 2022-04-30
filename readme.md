@@ -1,4 +1,4 @@
-# twist_joystick
+# mh-z19b CO2 Sensor
 
 This is an example project which allows to send array messages from an mh-z19b sensor to ros2
 The code can be modified according to application.
