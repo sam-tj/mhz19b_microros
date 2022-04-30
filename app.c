@@ -3,7 +3,7 @@
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
-#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/int32_multi_array.h>
 
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
@@ -34,14 +34,15 @@
 	}
 
 rcl_publisher_t publisher;
-std_msgs__msg__Int32 msg;
+std_msgs__msg__Int32MultiArray msg;
 
 int16_t co2;
 mhz19b_dev_t dev;
 char version[6];
 uint16_t range;
 bool autocal;
-bool sensorIsReady = false;
+
+int16_t counter = 0;
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
@@ -49,8 +50,14 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 	RCLC_UNUSED(last_call_time);
 	if (timer != NULL)
 	{
-		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
-		msg.data = co2;
+		printf('here');
+		msg.data.capacity = 2;
+		msg.data.data= (int32_t*) malloc(msg.data.capacity * sizeof(int32_t));
+		msg.data.size = 2;
+		msg.data.data[0] = counter++;
+		msg.data.data[1] = co2;
+		
+		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));	
 	}
 }
 
@@ -87,14 +94,14 @@ void appMain(void *arg)
 
 	// create node
 	rcl_node_t node;
-	RCCHECK(rclc_node_init_default(&node, "freertos_int32_publisher", "", &support));
+	RCCHECK(rclc_node_init_default(&node, "mhz19b_publisher", "", &support));
 
 	// create publisher
 	RCCHECK(rclc_publisher_init_default(
 		&publisher,
 		&node,
-		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-		"freertos_int32_publisher"));
+		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32MultiArray),
+		"mhz_19b"));
 
 	// create timer,
 	rcl_timer_t timer;
@@ -110,7 +117,7 @@ void appMain(void *arg)
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
-	msg.data = 0;
+	//memcpy(msg.data.data, array_init, sizeof(array_init_size));
 
 	while (mhz19b_is_warming_up(&dev, true)) // use smart warming up detection
 	{
@@ -121,7 +128,7 @@ void appMain(void *arg)
 	while (1)
 	{
 		if (mhz19b_is_ready(&dev))
-		{
+		{			
 			mhz19b_read_co2(&dev, &co2);
 		}
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
