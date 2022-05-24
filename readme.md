@@ -23,9 +23,9 @@ In ROS2, these values are published to mhz_19b topic to demonstrate the output f
 
 ### Tutorial
 1. Follow the  [tutorial here](https://link.medium.com/pdmyDUIh9nb "tutorial here") to setup the micro-ros environment.
-2. Clone this repository and copy the folder 'mhz_19b_microros' inside your workspace such that folder structure is as  [YOUR WORKSPACE]/firmware/freertos_apps/apps/mhz_19b_microros 
+2. Clone this repository and copy the folder 'mhz19b_microros' inside your workspace such that folder structure is as  [YOUR WORKSPACE]/firmware/freertos_apps/apps/mhz19b_microros 
 3. Open terminal can follow these commands:
-- ros2 run micro_ros_setup configure_firmware.sh mhz_19b_microros -t udp -i [LOCAL MACHINE IP ADDRESS] -p 8888
+- ros2 run micro_ros_setup configure_firmware.sh mhz19b_microros -t udp -i [LOCAL MACHINE IP ADDRESS] -p 8888
 - ros2 run micro_ros_setup build_firmware.sh
 - ros2 run micro_ros_setup flash_firmware.sh
 4. Once the flashing is successful, run
