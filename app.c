@@ -44,50 +44,34 @@ bool autocal;
 
 int16_t counter = 0;
 
+static void initialize_mhz19b(void);
+static void mhz19b_warmup(void);
+static void mhz19b_reading(void);
+
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
-
+	mhz19b_reading();
 	RCLC_UNUSED(last_call_time);
 	if (timer != NULL)
 	{
-		printf('here');
+		//printf('here');
 		msg.data.capacity = 2;
-		msg.data.data= (int32_t*) malloc(msg.data.capacity * sizeof(int32_t));
+		msg.data.data = (int32_t *)malloc(msg.data.capacity * sizeof(int32_t));
 		msg.data.size = 2;
 		msg.data.data[0] = counter++;
 		msg.data.data[1] = co2;
-		
-		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));	
+
+		RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
 	}
 }
 
 void appMain(void *arg)
 {
+	initialize_mhz19b();
+	mhz19b_warmup();
+
 	rcl_allocator_t allocator = rcl_get_default_allocator();
 	rclc_support_t support;
-
-	// sesnsor init
-	RCCHECK(mhz19b_init(&dev, UART_NUM_1, 12, 13));
-
-	while (!mhz19b_detect(&dev))
-	{
-		printf("MHZ-19B not detected, waiting...\n");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-
-	mhz19b_get_version(&dev, version);
-	printf("MHZ-19B firmware version: %s", version);
-
-	printf("MHZ-19B set range and autocal");
-
-	mhz19b_set_range(&dev, MHZ19B_RANGE_5000);
-	mhz19b_set_auto_calibration(&dev, false);
-
-	mhz19b_get_range(&dev, &range);
-	printf("range: %d", range);
-
-	mhz19b_get_auto_calibration(&dev, &autocal);
-	printf("autocal: %s", autocal ? "ON" : "OFF");
 
 	// create init_options
 	RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -117,20 +101,8 @@ void appMain(void *arg)
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
-	//memcpy(msg.data.data, array_init, sizeof(array_init_size));
-
-	while (mhz19b_is_warming_up(&dev, true)) // use smart warming up detection
-	{
-		printf("MHZ-19B is warming up\n");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-
 	while (1)
 	{
-		if (mhz19b_is_ready(&dev))
-		{			
-			mhz19b_read_co2(&dev, &co2);
-		}
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 		usleep(100000);
 	}
@@ -140,4 +112,49 @@ void appMain(void *arg)
 	RCCHECK(rcl_node_fini(&node))
 
 	vTaskDelete(NULL);
+}
+
+static void initialize_mhz19b(void)
+{
+	// sesnsor init
+	RCCHECK(mhz19b_init(&dev, UART_NUM_1, 12, 13));
+
+	while (!mhz19b_detect(&dev))
+	{
+		printf("MHZ-19B not detected, waiting...\n");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+
+	mhz19b_get_version(&dev, version);
+	printf("MHZ-19B firmware version: %s", version);
+
+	printf("MHZ-19B set range and autocal");
+
+	mhz19b_set_range(&dev, MHZ19B_RANGE_5000);
+	mhz19b_set_auto_calibration(&dev, false);
+
+	mhz19b_get_range(&dev, &range);
+	printf("range: %d", range);
+
+	mhz19b_get_auto_calibration(&dev, &autocal);
+	printf("autocal: %s", autocal ? "ON" : "OFF");
+}
+
+static void mhz19b_warmup(void)
+{
+	//memcpy(msg.data.data, array_init, sizeof(array_init_size));
+
+	while (mhz19b_is_warming_up(&dev, true)) // use smart warming up detection
+	{
+		printf("MHZ-19B is warming up\n");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+}
+
+static void mhz19b_reading(void)
+{
+	if (mhz19b_is_ready(&dev))
+	{
+		mhz19b_read_co2(&dev, &co2);
+	}
 }
